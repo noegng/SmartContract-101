@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aide-mémoire · Next.js App Router</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="course">TD ERC721 UX 101 · Référence</header>
+<h1>Next.js App Router : aide-mémoire</h1>
+<p class="subtitle">Next 16. En cas de doute : <code>erc721-ux/node_modules/next/dist/docs/</code>.</p>
+
+<h2>Fichier → URL</h2>
+<table>
+<tr><th>fichier</th><th>URL</th></tr>
+<tr><td><code>app/page.tsx</code></td><td><code>/</code></td></tr>
+<tr><td><code>app/chain-info/page.tsx</code></td><td><code>/chain-info</code></td></tr>
+<tr><td><code>app/fakeBayc/[tokenId]/page.tsx</code></td><td><code>/fakeBayc/42</code> (segment dynamique)</td></tr>
+</table>
+
+<h2><code>"use client"</code></h2>
+<p>Première ligne du fichier. Requis si le composant utilise state, effets, événements ou API du navigateur (<code>window.ethereum</code>). Sinon, c'est un Server Component.</p>
+
+<h2>Naviguer et rediriger (<code>next/navigation</code>)</h2>
+<table>
+<tr><th>besoin</th><th>outil</th></tr>
+<tr><td>lien cliquable</td><td><code>&lt;Link href="/x"&gt;</code> de <code>next/link</code> (navigation côté client, préchargement)</td></tr>
+<tr><td>rediriger pendant le rendu</td><td><code>redirect("/x")</code> (pas dans un gestionnaire d'événement)</td></tr>
+<tr><td>rediriger dans un gestionnaire ou un effet</td><td><code>const router = useRouter(); router.replace("/x")</code> (<code>push</code> ajoute une entrée d'historique)</td></tr>
+</table>
+
+<h2>Effet avec nettoyage (viem)</h2>
+<pre><code>useEffect(() =&gt; publicClient.watchBlockNumber({ emitOnBegin: true, onBlockNumber: setBlockNumber }), []);
+// watchBlockNumber renvoie unwatch(), que React appelle en quittant la page</code></pre>
+
+<footer>Sources : <a href="https://nextjs.org/docs/app/getting-started/layouts-and-pages">Layouts and Pages</a> · <a href="https://nextjs.org/docs/app/getting-started/server-and-client-components">Server and Client Components</a> · <a href="https://nextjs.org/docs/app/api-reference/functions/redirect">redirect</a> · <a href="https://nextjs.org/docs/app/api-reference/functions/use-router">useRouter</a> · Leçon : <a href="../lessons/0003-routes-et-redirection-app-router.html">0003</a></footer>
+</body>
+</html>

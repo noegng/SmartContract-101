@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0001 · Parler au wallet : le provider EIP-1193</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="course"><a href="../MISSION.md">TD ERC721 UX 101</a> · Leçon 0001 · ~15 min</header>
+<h1>Parler au wallet : le provider EIP-1193</h1>
+<p class="subtitle">Ce que fait vraiment <code>window.ethereum</code>, sans librairie.</p>
+
+<p class="win">Objectif : à la fin, tu pilotes MetaMask à la main depuis la console du navigateur, et tu sais expliquer chaque ligne de <code>erc721-ux/src/hooks/useWallet.ts</code> au prof. Ça couvre les points 1 et 3 de « Wallet Integration ».</p>
+
+<h2>1. Un objet, une seule fonction</h2>
+
+<p>MetaMask injecte dans chaque page un objet appelé <em>provider</em>. Par convention il s'appelle <code>window.ethereum</code>, mais la spec précise que ce nom n'en fait pas partie<a class="cite" href="https://eips.ethereum.org/EIPS/eip-1193#abstract">[1193]</a>. On lui parle avec <strong>une seule</strong> fonction :</p>
+
+<pre><code>const result = await window.ethereum.request({ method: "…", params: [ … ] });</code></pre>
+
+<p>La promesse est <em>résolue</em> avec le résultat de la méthode, ou <em>rejetée</em> avec une erreur qui porte un <code>code</code> numérique<a class="cite" href="https://eips.ethereum.org/EIPS/eip-1193#request">[1193]</a>. Pour te connecter, changer de réseau ou signer, tu changes seulement la chaîne <code>method</code>.</p>
+
+<h2>2. Les quatre méthodes du TD</h2>
+
+<table>
+<tr><th>method</th><th>params</th><th>renvoie</th><th>popup ?</th></tr>
+<tr><td><code>eth_requestAccounts</code></td><td>aucun</td><td><code>string[]</code> d'adresses</td><td>oui, la première fois</td></tr>
+<tr><td><code>eth_accounts</code></td><td>aucun</td><td><code>string[]</code>, vide si pas encore autorisé</td><td>non</td></tr>
+<tr><td><code>eth_chainId</code></td><td>aucun</td><td>chaîne hexadécimale, ex. <code>"0xaa36a7"</code></td><td>non</td></tr>
+<tr><td><code>wallet_switchEthereumChain</code></td><td><code>[{ chainId: "0xaa36a7" }]</code></td><td><code>null</code><a class="cite" href="https://eips.ethereum.org/EIPS/eip-3326">[3326]</a></td><td>oui</td></tr>
+</table>
+
+<p>Sepolia a le chain ID <code>11155111</code>, soit <code>0xaa36a7</code> en hexadécimal. Le wallet parle <strong>toujours</strong> en hexadécimal<a class="cite" href="https://eips.ethereum.org/EIPS/eip-3326#parameters">[3326]</a>. C'est pour ça que <code>useWallet.ts</code> appelle <code>toHex(chain.id)</code>.</p>
+
+<h2>3. Deux événements à écouter</h2>
+
+<p>Le provider fonctionne comme un <code>EventEmitter</code> Node : il a <code>on</code> et <code>removeListener</code><a class="cite" href="https://eips.ethereum.org/EIPS/eip-1193#events">[1193]</a>.</p>
+
+<pre><code>ethereum.on("accountsChanged", (accounts) =&gt; …); // string[] (vide = déconnecté)
+ethereum.on("chainChanged",    (chainId)  =&gt; …); // string hexadécimale</code></pre>
+
+<p>Sans ces événements, ton state React garde l'ancien compte quand l'utilisateur en change dans MetaMask. Ton app enverrait alors des transactions en croyant parler à une autre adresse.</p>
+
+<h2>4. Trois codes d'erreur à connaître</h2>
+
+<table>
+<tr><th>code</th><th>sens</th><th>d'où il vient</th><th>que faire</th></tr>
+<tr><td><code>4001</code></td><td>l'utilisateur a cliqué « Refuser »</td><td>EIP-1193<a class="cite" href="https://eips.ethereum.org/EIPS/eip-1193#provider-errors">[1193]</a></td><td>afficher un message, ne rien relancer</td></tr>
+<tr><td><code>4902</code></td><td>réseau inconnu du wallet</td><td>MetaMask<a class="cite" href="https://docs.metamask.io/wallet/how-to/manage-networks/add-network/">[MM]</a></td><td>appeler <code>wallet_addEthereumChain</code></td></tr>
+<tr><td><code>-32002</code></td><td>une demande attend déjà dans la popup</td><td>MetaMask<a class="cite" href="https://docs.metamask.io/wallet/how-to/manage-networks/add-network/">[MM]</a></td><td>désactiver le bouton pendant l'attente</td></tr>
+</table>
+
+<p>Le piège : si tu appelles <code>wallet_addEthereumChain</code> dans <em>n'importe quel</em> <code>catch</code>, un simple refus (4001) rouvre une deuxième popup. Il faut tester <code>e.code === 4902</code>.</p>
+
+<h2>5. À toi : pilote MetaMask depuis la console</h2>
+
+<p>Ouvre <code>http://localhost:3000</code> (<code>npm run dev</code> dans <code>erc721-ux/</code>), puis la console DevTools (<kbd>⌥⌘J</kbd>). Tape chaque ligne et <strong>note ce que tu observes</strong> avant de passer à la suivante.</p>
+
+<ol class="steps">
+<li><code>await ethereum.request({ method: "eth_chainId" })</code><br>Quel réseau ? Compare avec le tableau ci-dessus.</li>
+<li><code>ethereum.on("chainChanged", id =&gt; console.log("chaîne :", id))</code><br>Change ensuite de réseau <em>dans MetaMask</em>. Le log apparaît-il ? Sous quelle forme ?</li>
+<li><code>await ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xaa36a7" }] })</code><br>Selon le wallet, une popup s'ouvre (MetaMask) ou le changement est immédiat (Rabby). EIP-3326 dit seulement que le wallet <em>should</em> demander confirmation<a class="cite" href="https://eips.ethereum.org/EIPS/eip-3326#security-considerations">[3326]</a>. Si une popup apparaît, clique <strong>Refuser</strong> et lis le <code>code</code> de l'erreur. Sinon, regarde ce que renvoie la promesse.</li>
+<li value="4"><code>await ethereum.request({ method: "eth_accounts" })</code>, puis change de compte dans MetaMask et relance la ligne.</li>
+</ol>
+
+<p>Attendu : <code>"0x…"</code> en hexadécimal, un log à chaque changement de réseau, <code>null</code> quand le switch a réussi (ou le code <code>4001</code> si tu as refusé une popup), et une liste qui change avec le compte. Si tu vois autre chose, demande-moi pourquoi : c'est souvent là qu'on apprend le plus.</p>
+
+<h2>6. Rappel, de mémoire</h2>
+
+<p>Ferme la leçon (ou fais défiler pour masquer la section 2) et réponds sans regarder.</p>
+
+<div class="q" data-answer="2">
+  <div class="prompt">Que renvoie <code>eth_requestAccounts</code> quand l'utilisateur accepte ?</div>
+  <div class="opts">
+    <button class="opt">l'adresse unique du compte actif</button>
+    <button class="opt">un objet avec clé privée</button>
+    <button class="opt">un tableau d'adresses hexadécimales autorisées</button>
+    <button class="opt">le solde ETH du compte</button>
+  </div>
+  <div class="why">Un <code>string[]</code>. C'est pour ça que le code prend <code>accounts[0]</code>. Le wallet ne donne jamais la clé privée : c'est tout l'intérêt du provider.</div>
+</div>
+
+<div class="q" data-answer="0">
+  <div class="prompt">Sous quelle forme passer le réseau à <code>wallet_switchEthereumChain</code> ?</div>
+  <div class="opts">
+    <button class="opt">une chaîne hexadécimale comme 0xaa36a7</button>
+    <button class="opt">un nombre décimal comme 11155111</button>
+    <button class="opt">le nom du réseau Sepolia</button>
+    <button class="opt">une URL RPC vers Sepolia</button>
+  </div>
+  <div class="why">EIP-3326 : <code>chainId</code> « MUST specify the integer ID of the chain as a hexadecimal string ». Un nombre est rejeté.</div>
+</div>
+
+<div class="q" data-answer="3">
+  <div class="prompt">Le wallet rejette avec <code>code: 4001</code>. Que s'est-il passé ?</div>
+  <div class="opts">
+    <button class="opt">réseau inconnu dans le wallet</button>
+    <button class="opt">le provider est complètement déconnecté</button>
+    <button class="opt">méthode RPC non supportée ici</button>
+    <button class="opt">l'utilisateur a refusé la demande</button>
+  </div>
+  <div class="why">4001 = User Rejected Request (EIP-1193). Les autres réponses correspondent à 4902, 4900 et 4200.</div>
+</div>
+
+<div class="q" data-answer="1">
+  <div class="prompt">Quand faut-il appeler <code>wallet_addEthereumChain</code> ?</div>
+  <div class="opts">
+    <button class="opt">toujours avant chaque switch réseau</button>
+    <button class="opt">seulement si l'erreur vaut 4902</button>
+    <button class="opt">dès que le switch échoue</button>
+    <button class="opt">jamais, MetaMask connaît tous réseaux</button>
+  </div>
+  <div class="why">Seulement quand le réseau est inconnu (4902). Si tu l'appelles sur n'importe quel échec, un refus de l'utilisateur ouvre une seconde popup.</div>
+</div>
+
+<div class="q" data-answer="2">
+  <div class="prompt">Au chargement de la page, pourquoi <code>useWallet.ts</code> appelle <code>eth_accounts</code> et pas <code>eth_requestAccounts</code> ?</div>
+  <div class="opts">
+    <button class="opt">eth_requestAccounts ne marche qu'une fois</button>
+    <button class="opt">eth_accounts renvoie aussi le solde</button>
+    <button class="opt">éviter d'ouvrir une popup inutile</button>
+    <button class="opt">eth_requestAccounts demande une signature payante</button>
+  </div>
+  <div class="why"><code>eth_accounts</code> ne déclenche jamais de popup : il récupère une connexion déjà autorisée, ou <code>[]</code>. On garde <code>eth_requestAccounts</code> pour le clic sur « Connect ».</div>
+</div>
+
+<div class="q" data-recall="accountsChanged">
+  <div class="prompt">Écris le nom exact de l'événement à écouter pour savoir que l'utilisateur a changé de compte.</div>
+  <div class="why"><code>accountsChanged</code>. Il reçoit un <code>string[]</code>, vide si l'utilisateur a déconnecté le site.</div>
+</div>
+
+<div class="q" data-recall="0xaa36a7">
+  <div class="prompt">Écris le chain ID de Sepolia tel que le wallet l'attend.</div>
+  <div class="why"><code>0xaa36a7</code>, soit 11155111 en hexadécimal. Vérifie-le dans la console : <code>(11155111).toString(16)</code>.</div>
+</div>
+
+<p class="score" id="score"></p>
+
+<h2>7. Relie à ton code</h2>
+
+<p>Ouvre <code>erc721-ux/src/hooks/useWallet.ts</code> et retrouve, sans aide :</p>
+<ul>
+<li>la ligne qui ouvre la popup de connexion ;</li>
+<li>les deux <code>provider.on(…)</code>, et pourquoi le <code>return</code> du <code>useEffect</code> appelle <code>removeListener</code> (indice : React relance l'effet) ;</li>
+<li>le test <code>code !== 4902</code>.</li>
+</ul>
+<p>Si tu peux expliquer ces trois endroits à voix haute, tu peux défendre les points 1 et 3 devant le prof.</p>
+
+<div class="box source"><strong>Source principale à lire (10 min)</strong> : <a href="https://eips.ethereum.org/EIPS/eip-1193#appendix-i-consumer-facing-api-documentation">EIP-1193, Appendix I : Consumer-Facing API Documentation</a>. C'est la version courte de la spec, écrite pour les devs de dApp comme toi.</div>
+
+<div class="box ask">Une ligne pas claire, un résultat bizarre dans la console ? Pose-moi la question directement. Je suis là pour ça, et tes erreurs m'aident à choisir la prochaine leçon.</div>
+
+<footer>
+Fiche de référence : <a href="../reference/eip1193-provider.html">Provider EIP-1193 : aide-mémoire</a> ·
+Prochaine leçon : <a href="0002-walletconnect-from-scratch.html">0002 · WalletConnect sans librairie de connecteur</a>.
+</footer>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

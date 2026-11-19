@@ -43,3 +43,20 @@ export const erc20Abi = [
     outputs: [{ name: "", type: "uint8" }],
   },
 ] as const;
+
+// FakeBAYC (Sepolia 0x262f…91f5): ERC721Enumerable + a free claimAToken().
+// Only the functions the TD needs; full verified ABI on Etherscan.
+export const fakeBaycAbi = [
+  { type: "function", name: "name", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "string" }] },
+  { type: "function", name: "totalSupply", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  { type: "function", name: "claimAToken", stateMutability: "nonpayable", inputs: [], outputs: [] },
+  { type: "function", name: "tokenURI", stateMutability: "view",
+  inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "string" }] },
+] as const;

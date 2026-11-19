@@ -21,6 +21,10 @@
 - Docs Next.js locales : `../erc721-ux/node_modules/next/dist/docs/`
   Docs de la version installée (Next 16), plus fiables que la mémoire. Use for: App Router, `"use client"`, routes dynamiques `[tokenId]`.
 
+- [EIP-721 : ERC721 Metadata JSON Schema](https://eips.ethereum.org/EIPS/eip-721#specification)
+  Forme standard de `tokenURI` → JSON (`name`, `description`, `image`). FakeBAYC n'a que `image` + `attributes`. Use for: pages de token.
+- Passerelle IPFS : `https://gateway.pinata.cloud/ipfs/<CID>` (testée 2026-11-19 : 200 ; `ipfs.io` renvoyait 429). Use for: convertir `ipfs://` en URL affichable.
+
 ## Wisdom (Communities)
 
 - [Ethereum Stack Exchange](https://ethereum.stackexchange.com/)

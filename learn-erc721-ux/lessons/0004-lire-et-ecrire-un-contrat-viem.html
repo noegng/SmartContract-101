@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0004 · Lire et écrire un contrat avec viem</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="course"><a href="../MISSION.md">TD ERC721 UX 101</a> · Leçon 0004 · ~25 min</header>
+<h1>Lire et écrire un contrat avec viem</h1>
+<p class="subtitle">readContract pour lire, simuler → envoyer → attendre pour écrire.</p>
+
+<p class="win">Objectif : tu écris toi-même la page <code>/fakeBayc</code>, tu claim un FakeBAYC depuis ton site, puis tu valides l'exercice 1 auprès de l'Evaluator. Ça couvre 2 points manuels et 2 automatiques.</p>
+
+<h2>0. Échauffement</h2>
+
+<div class="q" data-answer="1">
+  <div class="prompt">Dans un composant, où placer un <code>redirect()</code> conditionnel ?</div>
+  <div class="opts">
+    <button class="opt">avant le premier hook du composant</button>
+    <button class="opt">après tous les hooks du composant</button>
+    <button class="opt">dans la fonction de nettoyage d'effet</button>
+    <button class="opt">dans un fichier route.ts séparé</button>
+  </div>
+  <div class="why">Tous les hooks d'abord, les sorties ensuite (<a href="https://react.dev/reference/rules/rules-of-hooks">Rules of Hooks</a>). C'est la correction de la leçon <a href="0003-routes-et-redirection-app-router.html">0003</a>.</div>
+</div>
+
+<h2>1. Ce que tu sais déjà du contrat</h2>
+
+<p>Tu connais le côté Solidity, c'est ton TD ERC721-101. <a href="https://sepolia.etherscan.io/address/0x262fc337408995376b35f950e98b7fB60CF691f5#code">FakeBAYC</a> est un <code>ERC721Enumerable</code> avec une fonction gratuite :</p>
+<pre><code>function claimAToken() public { _safeMint(msg.sender, tokenCounter); tokenCounter++; }</code></pre>
+<p>Ce qui est nouveau, c'est de l'appeler depuis le navigateur. J'ai déjà ajouté <code>FAKE_BAYC_ADDRESS</code> dans <code>src/lib/config.ts</code> et <code>fakeBaycAbi</code> (<code>name</code>, <code>totalSupply</code>, <code>balanceOf</code>, <code>claimAToken</code>) dans <code>src/lib/abis.ts</code>.</p>
+
+<h2>2. Lire : <code>readContract</code></h2>
+
+<p>Une fonction <code>view</code> ne coûte pas de gas et ne passe pas par le wallet : c'est le <code>publicClient</code> (ton RPC Alchemy) qui fait l'appel<a class="cite" href="https://viem.sh/docs/contract/readContract">[viem]</a>.</p>
+<pre><code>const supply = await publicClient.readContract({
+  address: FAKE_BAYC_ADDRESS,
+  abi: fakeBaycAbi,
+  functionName: "totalSupply",
+}); // 42n (un bigint, car uint256 ne tient pas dans un number)</code></pre>
+<p>Grâce au <code>as const</code> de l'ABI, TypeScript connaît le type de retour : <code>string</code> pour <code>name</code>, <code>bigint</code> pour <code>totalSupply</code>. Pour afficher un <code>bigint</code> dans du JSX, appelle <code>.toString()</code>.</p>
+<p><strong>Modèle dans ton projet :</strong> <code>src/components/Points.tsx</code> (un <code>useEffect</code> qui lit puis appelle <code>setState</code>).</p>
+
+<h2>3. Écrire : trois étapes</h2>
+
+<p><code>writeContract</code> envoie la transaction <em>sans vérifier</em> qu'elle va réussir. viem recommande de simuler d'abord<a class="cite" href="https://viem.sh/docs/contract/writeContract">[viem]</a>.</p>
+<pre><code>// 1. simuler : exécute l'appel « à blanc » via le RPC ; un revert arrive ici, avec sa raison
+const { request } = await publicClient.simulateContract({
+  account, address: FAKE_BAYC_ADDRESS, abi: fakeBaycAbi, functionName: "claimAToken",
+});
+// 2. envoyer : le wallet ouvre sa fenêtre de signature ; renvoie le hash de la tx
+const hash = await getWalletClient()!.writeContract(request);
+// 3. attendre : la tx est minée (ou revert)
+const receipt = await publicClient.waitForTransactionReceipt({ hash });</code></pre>
+<p><strong>Modèle dans ton projet :</strong> <code>src/components/SubmitExercise.tsx</code> fait exactement ces trois étapes, avec un état « pending » et un lien Etherscan.</p>
+
+<p><strong>Pourquoi passer <code>account</code> à la simulation ?</strong> Le contrat utilise <code>msg.sender</code>. Sans <code>account</code>, la simulation tournerait sans expéditeur, et un contrat qui vérifie l'appelant (comme l'Evaluator) ferait revert.</p>
+
+<h2>4. À toi de coder</h2>
+
+<ol class="steps">
+<li><strong>Crée <code>src/app/fakeBayc/page.tsx</code></strong> : affiche <code>name()</code> et <code>totalSupply()</code>. Ne charge les données qu'une fois, au montage.</li>
+<li><strong>Ajoute un bouton « Claim a FakeBAYC »</strong> avec <code>&lt;TxButton&gt;</code> et le compte de <code>useWallet()</code>. Une fois la tx confirmée, relis <code>totalSupply</code> pour voir le compteur monter. Indice : le <code>refreshKey</code> de <code>src/app/page.tsx</code>.</li>
+<li><strong>Ajoute un bouton « Valider l'exercice 1 »</strong> qui appelle <code>ex1_claimedFakeBAYC()</code> sur l'Evaluator. Il est déjà dans <code>evaluatorAbi</code>. Ouvre la page d'accueil : tes points doivent passer de 2 à 4.</li>
+</ol>
+
+<div class="box"><strong>Tu as choisi le composant générique.</strong> <code>src/components/TxButton.tsx</code> fait simuler → envoyer → attendre, et affiche l'état pending, le lien Etherscan et la raison du revert. Pour l'utiliser :
+<pre><code>&lt;TxButton
+  label="Claim a FakeBAYC"
+  account={account}
+  address={FAKE_BAYC_ADDRESS}
+  abi={fakeBaycAbi}
+  functionName="claimAToken"   // TypeScript refuse "totalSupply" (view) ou un nom absent de l'ABI
+  onSuccess={() =&gt; /* relire totalSupply */}
+/&gt;</code></pre>
+Lis <code>SubmitExercise.tsx</code> : c'est le premier utilisateur de <code>TxButton</code>.</div>
+
+<details class="box">
+<summary>Voir une solution pour l'étape 1 (seulement après avoir essayé)</summary>
+<pre><code>"use client";
+import { useEffect, useState } from "react";
+import { publicClient } from "@/lib/clients";
+import { fakeBaycAbi } from "@/lib/abis";
+import { FAKE_BAYC_ADDRESS } from "@/lib/config";
+
+export default function FakeBaycPage() {
+  const [name, setName] = useState&lt;string&gt;();
+  const [supply, setSupply] = useState&lt;bigint&gt;();
+
+  useEffect(() =&gt; {
+    const contract = { address: FAKE_BAYC_ADDRESS, abi: fakeBaycAbi } as const;
+    publicClient.readContract({ ...contract, functionName: "name" }).then(setName);
+    publicClient.readContract({ ...contract, functionName: "totalSupply" }).then(setSupply);
+  }, []);
+
+  return (
+    &lt;main className="mx-auto flex max-w-xl flex-col gap-4 p-8"&gt;
+      &lt;h1 className="text-2xl font-semibold"&gt;{name ?? "…"}&lt;/h1&gt;
+      &lt;p&gt;Total minted: {supply?.toString() ?? "…"}&lt;/p&gt;
+    &lt;/main&gt;
+  );
+}</code></pre>
+</details>
+
+<h2>5. Rappel, de mémoire</h2>
+
+<div class="q" data-answer="2">
+  <div class="prompt">Pourquoi <code>name()</code> ne déclenche-t-il aucune fenêtre dans Rabby ?</div>
+  <div class="opts">
+    <button class="opt">Rabby valide automatiquement les petits montants</button>
+    <button class="opt">le contrat FakeBAYC est déjà sur Sepolia</button>
+    <button class="opt">une lecture view passe par le RPC</button>
+    <button class="opt">la session WalletConnect l'autorise par défaut</button>
+  </div>
+  <div class="why">Une fonction <code>view</code> ne change pas l'état : le <code>publicClient</code> l'exécute via le RPC (<code>eth_call</code>), sans signature et sans gas.</div>
+</div>
+
+<div class="q" data-answer="0">
+  <div class="prompt">À quoi sert <code>simulateContract</code> avant <code>writeContract</code> ?</div>
+  <div class="opts">
+    <button class="opt">détecter un revert avant de signer</button>
+    <button class="opt">réduire le prix du gas payé</button>
+    <button class="opt">signer la transaction à la place</button>
+    <button class="opt">enregistrer la transaction dans Etherscan</button>
+  </div>
+  <div class="why"><code>writeContract</code> ne valide rien. La simulation exécute l'appel à blanc : si ça revert (par exemple « Evaluator: no FakeBAYC held »), l'utilisateur le sait avant de signer et de payer.</div>
+</div>
+
+<div class="q" data-recall="bigint|BigInt">
+  <div class="prompt">Quel type JavaScript viem renvoie-t-il pour un <code>uint256</code> ?</div>
+  <div class="why"><code>bigint</code> (ex. <code>42n</code>). Un <code>number</code> perd en précision au-delà de 2<sup>53</sup>, alors qu'un uint256 monte à 2<sup>256</sup>.</div>
+</div>
+
+<p class="score" id="score"></p>
+
+<div class="box source"><strong>Source principale à lire (10 min)</strong> : <a href="https://viem.sh/docs/contract/writeContract">viem : writeContract</a>, puis <a href="https://viem.sh/docs/contract/readContract">readContract</a>.</div>
+
+<div class="box ask">Une erreur TypeScript sur <code>functionName</code> ou <code>args</code> ? C'est souvent l'ABI. Colle-moi le message, on la lira ensemble.</div>
+
+<footer>
+Précédente : <a href="0003-routes-et-redirection-app-router.html">0003</a> ·
+Fiche : <a href="../reference/viem-read-write.html">viem lire / écrire : aide-mémoire</a> ·
+Prochaine : <a href="0005-route-dynamique-et-metadonnees.html">0005 · Route dynamique et métadonnées NFT</a>.
+</footer>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

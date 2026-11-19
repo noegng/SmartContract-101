@@ -19,6 +19,13 @@
 <tr><td><code>app/fakeBayc/[tokenId]/page.tsx</code></td><td><code>/fakeBayc/42</code> (segment dynamique)</td></tr>
 </table>
 
+<h2>Lire un segment dynamique (Next 16)</h2>
+<pre><code>"use client";
+import { use } from "react";
+export default function Page({ params }: { params: Promise&lt;{ tokenId: string }&gt; }) {
+  const { tokenId } = use(params);   // toujours une chaîne, à valider / convertir</code></pre>
+<p>Avec <code>cacheComponents: true</code> (défaut Next 16), ajoute un <code>loading.tsx</code> dans le dossier : il crée la frontière <code>&lt;Suspense&gt;</code> exigée pour lire un paramètre dynamique (sinon : erreur <code>blocking-prerender-dynamic</code>).</p>
+
 <h2><code>"use client"</code></h2>
 <p>Première ligne du fichier. Requis si le composant utilise state, effets, événements ou API du navigateur (<code>window.ethereum</code>). Sinon, c'est un Server Component.</p>
 
@@ -34,6 +41,6 @@
 <pre><code>useEffect(() =&gt; publicClient.watchBlockNumber({ emitOnBegin: true, onBlockNumber: setBlockNumber }), []);
 // watchBlockNumber renvoie unwatch(), que React appelle en quittant la page</code></pre>
 
-<footer>Sources : <a href="https://nextjs.org/docs/app/getting-started/layouts-and-pages">Layouts and Pages</a> · <a href="https://nextjs.org/docs/app/getting-started/server-and-client-components">Server and Client Components</a> · <a href="https://nextjs.org/docs/app/api-reference/functions/redirect">redirect</a> · <a href="https://nextjs.org/docs/app/api-reference/functions/use-router">useRouter</a> · Leçon : <a href="../lessons/0003-routes-et-redirection-app-router.html">0003</a></footer>
+<footer>Sources : <a href="https://nextjs.org/docs/app/getting-started/layouts-and-pages">Layouts and Pages</a> · <a href="https://nextjs.org/docs/app/getting-started/server-and-client-components">Server and Client Components</a> · <a href="https://nextjs.org/docs/app/api-reference/functions/redirect">redirect</a> · <a href="https://nextjs.org/docs/app/api-reference/functions/use-router">useRouter</a> · <a href="https://nextjs.org/docs/app/api-reference/file-conventions/dynamic-routes">Dynamic Segments</a> · Leçon : <a href="../lessons/0003-routes-et-redirection-app-router.html">0003</a></footer>
 </body>
 </html>

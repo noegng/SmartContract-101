@@ -1,14 +1,6 @@
 "use client";
 import { use, useEffect, useState } from "react";
-import { publicClient } from "@/lib/clients";
-import { fakeBaycAbi } from "@/lib/abis";
-import { FAKE_BAYC_ADDRESS } from "@/lib/config";
-
-// FakeBAYC metadata has only image + attributes (no name, no description).
-type Metadata = { image: string; attributes: { trait_type: string; value: string }[] };
-
-// Browsers can't open ipfs://, so go through an HTTP gateway.
-const toHttp = (uri: string) => uri.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/");
+import { fetchMetadata, toHttp, type Metadata } from "@/lib/fakeBayc";
 
 export default function TokenPage({ params }: { params: Promise<{ tokenId: string }> }) {
   const { tokenId } = use(params); // always a string: "0", "42", "abc"…
@@ -19,16 +11,7 @@ export default function TokenPage({ params }: { params: Promise<{ tokenId: strin
     // Promise.resolve() first, so that BigInt("abc") throwing lands in the same
     // .catch as a contract revert ("ERC721: invalid token ID").
     Promise.resolve()
-      .then(() =>
-        publicClient.readContract({
-          address: FAKE_BAYC_ADDRESS,
-          abi: fakeBaycAbi,
-          functionName: "tokenURI",
-          args: [BigInt(tokenId)],
-        }),
-      )
-      .then((uri) => fetch(uri)) // contract -> JSON URL
-      .then((res) => res.json()) // JSON URL -> metadata
+      .then(() => fetchMetadata(BigInt(tokenId)))
       .then(setMeta)
       .catch(() => setError(true));
   }, [tokenId]);

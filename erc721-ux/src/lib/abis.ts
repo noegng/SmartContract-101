@@ -59,4 +59,14 @@ export const fakeBaycAbi = [
   { type: "function", name: "claimAToken", stateMutability: "nonpayable", inputs: [], outputs: [] },
   { type: "function", name: "tokenURI", stateMutability: "view",
   inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "string" }] },
+  {
+    type: "function",
+    name: "tokenOfOwnerByIndex", // ERC721Enumerable: the owner's i-th token id
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "index", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
 ] as const;

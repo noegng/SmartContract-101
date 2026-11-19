@@ -5,6 +5,7 @@ import {
   http,
   type EIP1193Provider,
 } from "viem";
+import { mainnet } from "viem/chains";
 import { chain } from "./config";
 
 declare global {
@@ -17,6 +18,13 @@ declare global {
 export const publicClient = createPublicClient({
   chain,
   transport: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL),
+});
+
+// ENS primary names live on Ethereum mainnet, not on Sepolia: this client is
+// only used for ENS reads. http() without a URL uses viem's public mainnet RPC.
+export const ensClient = createPublicClient({
+  chain: mainnet,
+  transport: http(),
 });
 
 // The wallet the app talks to: the injected one (Rabby, MetaMask) by default,

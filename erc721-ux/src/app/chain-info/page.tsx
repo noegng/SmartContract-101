@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { publicClient } from "@/lib/clients";
+import { AccountName } from "@/components/AccountName";
 import { redirect } from "next/navigation";
 import { chain } from "@/lib/config";
 
@@ -30,7 +31,7 @@ if (chainId !== undefined && chainId !== chain.id) redirect("/wrong-network");
         Latest block (Sepolia RPC): <span className="font-mono">{blockNumber?.toString() ?? "…"}</span>
       </p>
       <p>
-        Address: <span className="font-mono text-sm">{account ?? "not connected"}</span>
+        Address: {account ? <AccountName address={account} /> : "not connected"}
       </p>
     </main>
   );

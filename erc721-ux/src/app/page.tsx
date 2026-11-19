@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { SubmitExercise } from "@/components/SubmitExercise";
 import { Points } from "@/components/Points";
+import { AccountName } from "@/components/AccountName";
 
 export default function Home() {
   const {
@@ -43,7 +44,7 @@ export default function Home() {
       ) : (
         <section className="flex flex-col gap-4">
           <p>
-            Connected: <span className="font-mono text-sm">{account}</span>
+            Connected: <AccountName address={account} />
           </p>
           {!isCorrectChain ? (
             <button onClick={switchToSepolia} className="rounded-lg border px-4 py-2">

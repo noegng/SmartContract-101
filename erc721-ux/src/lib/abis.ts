@@ -94,3 +94,26 @@ export const fakeNefturiansAbi = [
     outputs: [{ name: "", type: "uint256" }],
   },
 ] as const;
+
+// FakeMeebitsClaimer (Sepolia 0xA45C…215a): mints a FakeMeebit to tx.origin
+// if the signature over keccak256(abi.encode(fakeMeebits, tokenId)) comes from
+// a whitelisted signer.
+export const fakeMeebitsClaimerAbi = [
+  {
+    type: "function",
+    name: "tokensThatWereClaimed",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "uint256" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "claimAToken",
+    stateMutability: "payable",
+    inputs: [
+      { name: "_tokenToClaim", type: "uint256" },
+      { name: "_signature", type: "bytes" },
+    ],
+    outputs: [],
+  },
+] as const;

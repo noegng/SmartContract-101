@@ -70,3 +70,27 @@ export const fakeBaycAbi = [
     outputs: [{ name: "", type: "uint256" }],
   },
 ] as const;
+
+// FakeNefturians (Sepolia 0x4F4f…2469): ERC721Enumerable + payable buyAToken().
+export const fakeNefturiansAbi = [
+  { type: "function", name: "name", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "string" }] },
+  { type: "function", name: "tokenPrice", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "buyAToken", stateMutability: "payable", inputs: [], outputs: [] },
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "tokenOfOwnerByIndex",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "index", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
